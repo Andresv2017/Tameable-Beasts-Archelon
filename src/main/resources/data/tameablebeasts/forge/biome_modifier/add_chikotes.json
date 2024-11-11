@@ -1,0 +1,13 @@
+{
+  "type": "forge:add_spawns",
+  "biomes": [
+    "minecraft:plains",
+    "minecraft:sunflower_plains"
+  ],
+  "spawners": {
+    "type": "tameablebeasts:tameable_chikote",
+    "weight": 15,
+    "maxCount": 4,
+    "minCount": 1
+  }
+}
