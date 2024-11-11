@@ -22,11 +22,11 @@ public class ArchelonRender extends GeoEntityRenderer<ArchelonEntity> {
 
     @Override
     public void render(ArchelonEntity entity, float entityYaw, float partialTicks, PoseStack stack, MultiBufferSource bufferIn, int packedLightIn) {
+        if(entity.isBaby()){
+            stack.scale(1F,1F,1F);
+        }else {
+            stack.scale(2F,2F,2F);
+        }
         super.render(entity, entityYaw, partialTicks, stack, bufferIn, packedLightIn);
-    }
-
-    @Override
-    public void renderRecursively(PoseStack poseStack, ArchelonEntity animatable, GeoBone bone, RenderType renderType, MultiBufferSource bufferSource, VertexConsumer buffer, boolean isReRender, float partialTick, int packedLight, int packedOverlay, float red, float green, float blue, float alpha) {
-        super.renderRecursively(poseStack, animatable, bone, renderType, bufferSource, buffer, isReRender, partialTick, packedLight, packedOverlay, red, green, blue, alpha);
     }
 }
