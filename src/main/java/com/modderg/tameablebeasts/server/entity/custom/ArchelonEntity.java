@@ -86,7 +86,7 @@ public class ArchelonEntity extends WaterAnimal implements GeoEntity, OwnableEnt
     private int rand;
     public ArchelonEntity(EntityType<? extends WaterAnimal> entityType, Level level) {
         super(entityType, level);
-        this.moveControl = new SmoothSwimmingMoveControl(this, 50, 10, 0.005F, 0.002F, true);
+        this.moveControl = new SmoothSwimmingMoveControl(this, 85, 10, 0.02F, 0.01F, true);
         this.lookControl = new WaterMountLookControl(this,10);
         this.setPathfindingMalus(BlockPathTypes.WATER, 0.0F);
         rand = 0;
@@ -145,7 +145,7 @@ public class ArchelonEntity extends WaterAnimal implements GeoEntity, OwnableEnt
     public static AttributeSupplier.Builder setCustomAttributes() {
         return Mob.createMobAttributes()
                 .add(Attributes.MAX_HEALTH, 40.0D)
-                .add(Attributes.MOVEMENT_SPEED, 0.2D)
+                .add(Attributes.MOVEMENT_SPEED, 1.2D)
                 .add(Attributes.ATTACK_DAMAGE, 1.0D)
                 .add(Attributes.FOLLOW_RANGE, 24);
     }
@@ -568,8 +568,7 @@ public class ArchelonEntity extends WaterAnimal implements GeoEntity, OwnableEnt
         float speed = this.getSpeed();
 
         if (isControlledByLocalInstance() && getControllingPassenger() != null && getControllingPassenger() instanceof Player rider) {
-            speed = (float) this.getAttributeValue(Attributes.MOVEMENT_SPEED) * 0.2F; // Multiplica por un factor menor para reducir la velocidad
-
+            speed = (float) this.getAttributeValue(Attributes.MOVEMENT_SPEED);
 
             double moveX = vec3d.x;
             double moveY = vec3d.y;
@@ -586,7 +585,7 @@ public class ArchelonEntity extends WaterAnimal implements GeoEntity, OwnableEnt
                 if (isInWater()) {
                     moveX = rider.xxa * 3F;
                     moveZ = moveZ > 0 ? moveZ : 0;
-                    moveZ *= 5F;
+                    moveZ *= 15F;
                 }else{
                     moveZ = moveZ * 0.75;
                 }
@@ -614,7 +613,7 @@ public class ArchelonEntity extends WaterAnimal implements GeoEntity, OwnableEnt
 
                 vec3d = new Vec3(moveX, moveY, moveZ);
 
-                this.setSpeed(speed * 0.2F);
+                this.setSpeed(speed);
             }
             else if (rider instanceof Player) {
 //                calculateEntityAnimation(true);
@@ -624,9 +623,9 @@ public class ArchelonEntity extends WaterAnimal implements GeoEntity, OwnableEnt
         }
 
         if (this.isEffectiveAi() && this.isInWater()) {
-            this.moveRelative(this.getSpeed() * 0.2F, vec3d);
+            this.moveRelative(this.getSpeed(), vec3d);
             this.move(MoverType.SELF, this.getDeltaMovement());
-            this.setDeltaMovement(this.getDeltaMovement().scale(0.4D));
+            this.setDeltaMovement(this.getDeltaMovement().scale(0.9D));
             if (this.getTarget() == null) {
                 this.setDeltaMovement(this.getDeltaMovement().add(0.0D, -0.005D, 0.0D));
             }
