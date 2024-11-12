@@ -4,7 +4,6 @@ import com.modderg.tameablebeasts.server.entity.goals.WaterMountLookControl;
 import com.modderg.tameablebeasts.server.entity.util.HitboxHelper;
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.Direction;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.syncher.EntityDataAccessor;
@@ -14,7 +13,6 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.players.OldUsersConverter;
 import net.minecraft.sounds.SoundEvent;
 import net.minecraft.sounds.SoundEvents;
-import net.minecraft.tags.FluidTags;
 import net.minecraft.util.TimeUtil;
 import net.minecraft.util.valueproviders.UniformInt;
 import net.minecraft.world.DifficultyInstance;
@@ -45,7 +43,6 @@ import net.minecraft.world.item.Items;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.ServerLevelAccessor;
 import net.minecraft.world.level.block.state.BlockState;
-import net.minecraft.world.level.material.FluidState;
 import net.minecraft.world.level.pathfinder.BlockPathTypes;
 import net.minecraft.world.level.pathfinder.Node;
 import net.minecraft.world.level.pathfinder.Path;
@@ -56,20 +53,15 @@ import org.jetbrains.annotations.Nullable;
 import software.bernie.geckolib.animatable.GeoEntity;
 import software.bernie.geckolib.core.animatable.GeoAnimatable;
 import software.bernie.geckolib.core.animatable.instance.AnimatableInstanceCache;
-import software.bernie.geckolib.core.animation.AnimatableManager;
-import software.bernie.geckolib.core.animation.AnimationController;
-import software.bernie.geckolib.core.animation.AnimationState;
-import software.bernie.geckolib.core.animation.RawAnimation;
+import software.bernie.geckolib.core.animation.*;
 import net.minecraft.util.Mth;
+import software.bernie.geckolib.core.animation.AnimationState;
 import software.bernie.geckolib.core.object.PlayState;
 import software.bernie.geckolib.util.GeckoLibUtil;
 
-import java.util.EnumSet;
-import java.util.Iterator;
-import java.util.Optional;
-import java.util.UUID;
+import java.util.*;
 
-//TODO: Try to fix the head in the renderer
+
 public class ArchelonEntity extends WaterAnimal implements GeoEntity, OwnableEntity, NeutralMob {
 
     static final TargetingConditions SWIM_WITH_PLAYER_TARGETING = TargetingConditions.forNonCombat().range(15.0D).ignoreLineOfSight();
@@ -94,9 +86,7 @@ public class ArchelonEntity extends WaterAnimal implements GeoEntity, OwnableEnt
     }
 
     private static final EntityDataAccessor<Boolean> FROM_EGG = SynchedEntityData.defineId(ArchelonEntity.class, EntityDataSerializers.BOOLEAN);
-    private static final EntityDataAccessor<Boolean> FROM_BOOK = SynchedEntityData.defineId(ArchelonEntity.class, EntityDataSerializers.BOOLEAN);
     private static final EntityDataAccessor<Boolean> IS_SADDLED = SynchedEntityData.defineId(ArchelonEntity.class, EntityDataSerializers.BOOLEAN);
-    private static final EntityDataAccessor<Boolean> HAS_ARMOR = SynchedEntityData.defineId(ArchelonEntity.class, EntityDataSerializers.BOOLEAN);
     private static final EntityDataAccessor<Integer> EATING_TIME = SynchedEntityData.defineId(ArchelonEntity.class, EntityDataSerializers.INT);
     private static final EntityDataAccessor<Integer> OUT_OF_WATER_RIDING_TICKS = SynchedEntityData.defineId(ArchelonEntity.class, EntityDataSerializers.INT);
     protected static final EntityDataAccessor<Optional<UUID>> DATA_OWNERUUID_ID = SynchedEntityData.defineId(ArchelonEntity.class, EntityDataSerializers.OPTIONAL_UUID);
@@ -106,18 +96,6 @@ public class ArchelonEntity extends WaterAnimal implements GeoEntity, OwnableEnt
     private static final EntityDataAccessor<Integer> BASE_VARIANT = SynchedEntityData.defineId(ArchelonEntity.class, EntityDataSerializers.INT);
     private static final EntityDataAccessor<Integer> PATTERN_VARIANT = SynchedEntityData.defineId(ArchelonEntity.class, EntityDataSerializers.INT);
 
-    protected static final RawAnimation BOOK = RawAnimation.begin().thenLoop("animation.ophthalmo.book");
-    protected static final RawAnimation SWIM = RawAnimation.begin().thenLoop("animation.ophthalmo.swim");
-    protected static final RawAnimation SWIM_FAST = RawAnimation.begin().thenLoop("animation.ophthalmo.swim_fast");
-
-    protected static final RawAnimation SWIM_SLOW = RawAnimation.begin().thenLoop("animation.ophthalmo.swim_slow");
-    protected static final RawAnimation IDLE = RawAnimation.begin().thenLoop("animation.ophthalmo.idle");
-    protected static final RawAnimation FLOP = RawAnimation.begin().thenLoop("animation.ophthalmo.flop");
-    protected static final RawAnimation ATTACK = RawAnimation.begin().thenPlay("animation.ophthalmo.attack");
-    protected static final RawAnimation ATTACK2 = RawAnimation.begin().thenPlay("animation.ophthalmo.attack2");
-    protected static final RawAnimation EAT = RawAnimation.begin().thenPlay("animation.ophthalmo.eating");
-    protected static final RawAnimation SWIM_HEADLESS = RawAnimation.begin().thenLoop("animation.ophthalmo.swim_headless");
-    protected static final RawAnimation IDLE_HEADLESS = RawAnimation.begin().thenLoop("animation.ophthalmo.idle_headless");
 
     private static final EntityDataAccessor<Integer> TEXTURE_ID = SynchedEntityData.defineId(ArchelonEntity.class, EntityDataSerializers.INT);
     public void setTextureId(int i){
@@ -129,14 +107,13 @@ public class ArchelonEntity extends WaterAnimal implements GeoEntity, OwnableEnt
 
     protected void registerGoals() {
         this.goalSelector.addGoal(0, new TryFindWaterGoal(this));
-        this.goalSelector.addGoal(3, new OphthalmoSwimWithPlayerGoal(this, 2));
+        this.goalSelector.addGoal(3, new ArchelonSwimWithPlayerGoal(this, 2));
         this.goalSelector.addGoal(4, new RandomSwimmingGoal(this, 1.0D, 10));
         this.goalSelector.addGoal(4, new RandomLookAroundGoal(this));
         this.goalSelector.addGoal(5, new LookAtPlayerGoal(this, Player.class, 6.0F));
-        this.goalSelector.addGoal(5, new OphthalmoJumpGoal(this, 3));
-        this.goalSelector.addGoal(2, new OphthalmoMeleeAttackGoal(this, (double)1F, true));
+        this.goalSelector.addGoal(2, new ArhcelonMeleeAttackGoal(this, (double)1F, true));
         if (!this.hasControllingPassenger()){
-            this.targetSelector.addGoal(3, new OphthalmoOwnerHurtByTargetGoal(this));
+            this.targetSelector.addGoal(3, new ArchelonOwnerHurtByTargetGoal(this));
             this.targetSelector.addGoal(3, new HurtByTargetGoal(this));
         }
         this.targetSelector.addGoal(8, new ResetUniversalAngerTargetGoal<>(this, false));
@@ -153,9 +130,7 @@ public class ArchelonEntity extends WaterAnimal implements GeoEntity, OwnableEnt
     protected void defineSynchedData() {
         super.defineSynchedData();
         this.entityData.define(FROM_EGG, false);
-        this.entityData.define(FROM_BOOK, false);
         this.entityData.define(IS_SADDLED, false);
-        this.entityData.define(HAS_ARMOR, false);
         this.entityData.define(EATING_TIME, 0);
         this.entityData.define(OUT_OF_WATER_RIDING_TICKS, 0);
         this.entityData.define(IS_TAMED, false);
@@ -172,7 +147,6 @@ public class ArchelonEntity extends WaterAnimal implements GeoEntity, OwnableEnt
         pCompound.putBoolean("Tame", this.isTamed());
         pCompound.putBoolean("FromEgg", this.isFromEgg());
         pCompound.putBoolean("IsSaddled", this.getIsSaddled());
-        pCompound.putBoolean("HasArmor", this.getHasArmor());
         pCompound.putInt("TEXTURE_ID", this.getTextureID());
 
         if (this.getOwnerUUID() != null) {
@@ -190,7 +164,6 @@ public class ArchelonEntity extends WaterAnimal implements GeoEntity, OwnableEnt
         this.setTamed(pCompound.getBoolean("Tame"));
         this.setIsFromEgg(pCompound.getBoolean("FromEgg"));
         this.setIsSaddled(pCompound.getBoolean("IsSaddled"));
-        this.setHasArmor(pCompound.getBoolean("HasArmor"));
         if (pCompound.contains("TEXTURE_ID"))
             this.setTextureId(pCompound.getInt("TEXTURE_ID"));
 
@@ -216,9 +189,6 @@ public class ArchelonEntity extends WaterAnimal implements GeoEntity, OwnableEnt
         super.dropEquipment();
         if (this.getIsSaddled()) {
             this.spawnAtLocation(Items.SADDLE);
-        }
-        if (this.getHasArmor()){
-            this.spawnAtLocation(getItemBySlot(EquipmentSlot.CHEST));
         }
     }
 
@@ -390,24 +360,11 @@ public class ArchelonEntity extends WaterAnimal implements GeoEntity, OwnableEnt
         return pStack.is(Items.SADDLE);
     }
 
-    public void setHasArmor(boolean pHasArmor) {
-        this.entityData.set(HAS_ARMOR, pHasArmor && this.isWearingArmor());
-    }
-
-    public boolean getHasArmor() {
-        return this.entityData.get(HAS_ARMOR);
-    }
 
     public boolean isWearingArmor() {
         return !this.getItemBySlot(EquipmentSlot.CHEST).isEmpty();
     }
 
-    public void equipArmor(Player pPlayer, ItemStack pArmor) {
-        if (this.isArmor(pArmor)) {
-            this.setArmor(pArmor, pPlayer);
-            this.setHasArmor(isWearingArmor());
-        }
-    }
 
     private void setArmor(ItemStack pArmor, Player pPlayer) {
 //        if (pPlayer.getAbilities().instabuild){
@@ -451,22 +408,6 @@ public class ArchelonEntity extends WaterAnimal implements GeoEntity, OwnableEnt
         return new WaterBoundPathNavigation(this, pLevel);
     }
 
-    public boolean hurt (DamageSource pSource, float pAmount){
-
-        Entity entity = pSource.getEntity();
-        if (this.getHasArmor() && entity != null
-                && !(pSource.is(DamageTypes.MAGIC) || pSource.is(DamageTypes.WITHER) || pSource.is(DamageTypes.FELL_OUT_OF_WORLD))){
-            this.damageItem(this.getItemBySlot(EquipmentSlot.CHEST));
-            for(int j = 0; j < 5; ++j) {
-                this.level().addParticle(ParticleTypes.CRIT, this.getRandomX(1.0), this.getRandomY(), this.getRandomZ(1.0), 0.0, 0.0, 0.0);
-            }
-            return false;
-        }
-        else {
-            return super.hurt(pSource, pAmount);
-        }
-
-    }
 
     @Override
     public void tick() {
@@ -528,9 +469,6 @@ public class ArchelonEntity extends WaterAnimal implements GeoEntity, OwnableEnt
         this.yRotO = this.yBodyRot = this.yHeadRot = this.getYRot();
     }
 
-//    protected Vec2 getRiddenRotation(LivingEntity pEntity) {
-//        return new Vec2((float) -this.getDeltaMovement().y * 80, pEntity.getYRot());
-//    }
 
     @Override
     protected float getWaterSlowDown() {
@@ -634,11 +572,6 @@ public class ArchelonEntity extends WaterAnimal implements GeoEntity, OwnableEnt
         }
     }
 
-    protected float rotateTowards(float pFrom, float pTo, float pMaxDelta) {
-        float f = Mth.degreesDifference(pFrom, pTo);
-        float f1 = Mth.clamp(f, -pMaxDelta, pMaxDelta);
-        return pFrom + f1;
-    }
 
     public InteractionResult mobInteract(Player pPlayer, InteractionHand pHand) {
 
@@ -651,24 +584,6 @@ public class ArchelonEntity extends WaterAnimal implements GeoEntity, OwnableEnt
                 InteractionResult interactionresult = itemstack.interactLivingEntity(pPlayer, this, pHand);
                 if (interactionresult.consumesAction()) {
                     return interactionresult;
-                }
-
-                if (itemstack.is(Items.SHEARS) && this.isTamed()){
-
-                    if (this.getHasArmor()){
-                        this.spawnAtLocation(this.getItemBySlot(EquipmentSlot.CHEST));
-                        this.setItemSlot(EquipmentSlot.CHEST, ItemStack.EMPTY);
-                        this.setHasArmor(false);
-
-                        return InteractionResult.SUCCESS;
-                    }else if (this.getIsSaddled()){
-                        this.playSound(SoundEvents.SHEEP_SHEAR);
-                        this.spawnAtLocation(Items.SADDLE);
-                        this.setIsSaddled(false);
-
-                        return InteractionResult.SUCCESS;
-                    }
-
                 }
 
                 if (itemstack.is(Items.TROPICAL_FISH) && !this.isTamed() && this.getEatingTime()==0){
@@ -698,14 +613,6 @@ public class ArchelonEntity extends WaterAnimal implements GeoEntity, OwnableEnt
                     return InteractionResult.SUCCESS;
                 }
 
-                if (this.canWearArmor() && this.isArmor(itemstack) && !this.isWearingArmor()) {
-                    this.equipArmor(pPlayer, itemstack);
-                    if (!pPlayer.getAbilities().instabuild) {
-                        itemstack.shrink(1);
-                    }
-                    return InteractionResult.SUCCESS;
-                }
-
                 if (this.isTamed()){
                     if (this.isFood(itemstack) && this.getHealth() < this.getMaxHealth()){
                         if (!pPlayer.getAbilities().instabuild) {
@@ -720,26 +627,6 @@ public class ArchelonEntity extends WaterAnimal implements GeoEntity, OwnableEnt
                         }
                         this.setEatingTime(20);
                         return InteractionResult.SUCCESS;
-                    }
-
-                    if (itemstack.is(Items.IRON_HORSE_ARMOR) && this.getHasArmor()){
-                        if (!pPlayer.getAbilities().instabuild) {
-                            itemstack.shrink(1);
-                        }
-                        ItemStack armor = this.getItemBySlot(EquipmentSlot.CHEST);
-                        int prevDamage = armor.getDamageValue();
-                        int durabilityLeft = armor.getMaxDamage() - armor.getDamageValue();
-                        if (durabilityLeft < armor.getMaxDamage()){
-                            if (armor.getMaxDamage() > durabilityLeft+50) {
-                                this.repairItem(this.getItemBySlot(EquipmentSlot.CHEST), 50);
-                            }else {
-                                this.repairItem(this.getItemBySlot(EquipmentSlot.CHEST), prevDamage);
-                            }
-                            for(int j = 0; j < 5; ++j) {
-                                this.level().addParticle(ParticleTypes.HAPPY_VILLAGER, this.getRandomX(1.0), this.getRandomY() + 0.5, this.getRandomZ(1.0), 0.0, 0.0, 0.0);
-                            }
-                            return InteractionResult.SUCCESS;
-                        }
                     }
                 }
             }
@@ -760,19 +647,6 @@ public class ArchelonEntity extends WaterAnimal implements GeoEntity, OwnableEnt
         if (stack != null) {
             this.getItemBySlot(EquipmentSlot.CHEST).hurt(-repair, this.getRandom(), null);
             this.playSound(SoundEvents.ANVIL_PLACE, 1.0F, (this.random.nextFloat() - (this.random.nextFloat()) * 0.2F) + 0.8F);
-        }
-    }
-
-    private void damageItem(ItemStack stack) {
-        stack.hurt(1, this.getRandom(), null);
-        if (stack.getDamageValue() >= stack.getMaxDamage()) {
-            this.setItemSlot(EquipmentSlot.CHEST, ItemStack.EMPTY);
-            this.setHasArmor(false);
-        }
-        else if (stack.getDamageValue() == (stack.getMaxDamage()*0.5) || stack.getDamageValue() == (stack.getMaxDamage()*0.75) || stack.getDamageValue() == (stack.getMaxDamage()*0.25)){
-            this.playSound(SoundEvents.ANVIL_PLACE, 1.0F, (this.random.nextFloat() - (this.random.nextFloat()) * 0.2F) + 1.0F);
-        }else {
-            this.playSound(SoundEvents.ANVIL_PLACE, 1.0F, (this.random.nextFloat() - (this.random.nextFloat()) * 0.2F) + 1.0F);
         }
     }
 
@@ -811,77 +685,53 @@ public class ArchelonEntity extends WaterAnimal implements GeoEntity, OwnableEnt
     }
 
     @Override
-    public void registerControllers(AnimatableManager.ControllerRegistrar controllerRegistrar) {
-        controllerRegistrar.add(new AnimationController[]{new AnimationController(this, "Normal", 5, this::Controller)});
-        controllerRegistrar.add(new AnimationController[]{new AnimationController(this, "Head", 0, this::HeadController)});
+    public void registerControllers(AnimatableManager.ControllerRegistrar controllers) {
+        controllers.add(new AnimationController[] { new AnimationController((GeoAnimatable)this, "movecontroller", 5, this::movementPredicate) });
+        controllers.add(new AnimationController[] { new AnimationController((GeoAnimatable)this, "attackcontroller", 5, this::attackPredicate) });
     }
 
     private final AnimatableInstanceCache cache = GeckoLibUtil.createInstanceCache(this);
 
     @Override
     public AnimatableInstanceCache getAnimatableInstanceCache() {
-        return cache;
+        return this.cache;
     }
 
-    protected <E extends GeoAnimatable> PlayState Controller(AnimationState<E> event) {
+    protected static final RawAnimation SWIM = RawAnimation.begin().thenLoop("swim");
+    protected static final RawAnimation IDLE = RawAnimation.begin().thenLoop("idle");
 
-        if (!this.isFromBook()) {
-            if (this.getAnimationState() == 21) {
-                if (rand > 50) {
-                    event.setAndContinue(ATTACK);
-                } else {
-                    event.setAndContinue(ATTACK2);
-                }
-            } else if (this.isVehicle()) {
+    public PlayState attackPredicate(AnimationState event) {
+        if(this.swinging && event.getController().getAnimationState().equals(AnimationController.State.STOPPED)){
+            event.getController().forceAnimationReset();
 
-                if (this.movement!=null){
+            int AttackCount = random.nextInt(2);
 
-                    if (this.movement.horizontalDistanceSqr() > 0.1 || (this.movement.y >= 2 || this.movement.y <= -2)) {
-                        event.setAndContinue(SWIM_FAST);
-
-                    } else if (this.movement.horizontalDistanceSqr() > 0.001 || (this.movement.y < 2 || this.movement.y > -2)) {
-                        event.setAndContinue(SWIM_SLOW);
-                    }else {
-                        event.setAndContinue(IDLE);
-                    }
-
-                } else {
-                    event.setAndContinue(IDLE);
-                }
-
-            }else if(this.getDeltaMovement().horizontalDistanceSqr() > 0.000001 && this.isInWater() && !this.isVehicle()) {
-                if (this.getEatingTime() > 0){
-                    event.setAndContinue(SWIM_HEADLESS);
-                }
-                else {
-                    event.setAndContinue(SWIM);
-                }
-                event.getController().setAnimationSpeed(1.25f);
-            } else if (!this.isInWater()&&!this.isVehicle()){
-                event.setAndContinue(FLOP);
-            } else {
-                if (this.getEatingTime() > 0){
-                    event.setAndContinue(IDLE_HEADLESS);
-                }
-                else {
-                    event.setAndContinue(IDLE);
-                }
+            if(AttackCount == 0) {
+                event.getController().setAnimation(RawAnimation.begin().then("attack", Animation.LoopType.PLAY_ONCE));
             }
+
+            this.swinging = false;
         }
         return PlayState.CONTINUE;
     }
 
-    protected <E extends GeoAnimatable> PlayState HeadController(AnimationState<E> event) {
-        if (this.isFromBook()){
-            event.setAndContinue(BOOK);
-            return PlayState.CONTINUE;
-        }else if (this.getEatingTime()>0){
-            event.setAndContinue(EAT);
-            return PlayState.CONTINUE;
-        }else {
-            event.getController().forceAnimationReset();
-            return PlayState.STOP;
+    protected PlayState movementPredicate(AnimationState event) {
+        if (this.getDeltaMovement().horizontalDistance() > 1.0E-6D && !this.isInWater()) {
+            if (isInWater()) {
+                //System.out.println("Ejecutando animación: SWIM");
+                event.setAndContinue(SWIM);
+                event.getController().setAnimationSpeed(1.0D);
+                return PlayState.CONTINUE;
+            }
+
+            if (!isInWater()) {
+                //System.out.println("Ejecutando animación: IDLE");
+                event.setAndContinue(IDLE);
+                event.getController().setAnimationSpeed(1.0D);
+            }
+
         }
+        return PlayState.CONTINUE;
     }
 
     public int getAnimationState() {
@@ -897,10 +747,7 @@ public class ArchelonEntity extends WaterAnimal implements GeoEntity, OwnableEnt
         return !this.isVehicle() && !this.isAngryAt(pPlayer);
     }
 
-
-    public boolean isFromBook() {return this.entityData.get(FROM_BOOK);}
-
-    static class OphthalmoMeleeAttackGoal extends Goal {
+    static class ArhcelonMeleeAttackGoal extends Goal {
         protected final ArchelonEntity mob;
         private final double speedModifier;
         private final boolean followingTargetEvenIfNotSeen;
@@ -915,7 +762,7 @@ public class ArchelonEntity extends WaterAnimal implements GeoEntity, OwnableEnt
         private boolean canPenalize = false;
         private int animTime = 0;
 
-        public OphthalmoMeleeAttackGoal(ArchelonEntity anomalocaris, double speed, boolean canFollowIfUnseen) {
+        public ArhcelonMeleeAttackGoal(ArchelonEntity anomalocaris, double speed, boolean canFollowIfUnseen) {
             this.mob = anomalocaris;
             this.speedModifier = speed;
             this.followingTargetEvenIfNotSeen = canFollowIfUnseen;
@@ -1076,30 +923,17 @@ public class ArchelonEntity extends WaterAnimal implements GeoEntity, OwnableEnt
             this.ticksUntilNextAttack = 0;
         }
 
-        protected boolean isTimeToAttack() {
-            return this.ticksUntilNextAttack <= 0;
-        }
-
-        protected int getTicksUntilNextAttack() {
-            return this.ticksUntilNextAttack;
-        }
-
-        protected int getAttackInterval() {
-            return 5;
-        }
 
         protected double getAttackReachSqr(LivingEntity p_179512_1_) {
             return (double)(this.mob.getBbWidth() * 2.5F * this.mob.getBbWidth() * 1.8F + p_179512_1_.getBbWidth());
         }
     }
 
-
     private SoundEvent getAttackSound() {
         return SoundEvents.PHANTOM_BITE;
     }
 
     protected void playStepSound(BlockPos p_28301_, BlockState p_28302_) {}
-
 
     @Nullable
     public LivingEntity getControllingPassenger() {
@@ -1117,93 +951,12 @@ public class ArchelonEntity extends WaterAnimal implements GeoEntity, OwnableEnt
         return this.getIsSaddled() ? (Player)passenger : null;
     }
 
-    public class OphthalmoJumpGoal extends JumpGoal {
-        private static final int[] STEPS_TO_CHECK = new int[]{0, 1, 4, 5, 6, 7};
-        private final ArchelonEntity dolphin;
-        private final int interval;
-        private boolean breached;
-
-        public OphthalmoJumpGoal(ArchelonEntity pDolphin, int pInterval) {
-            this.dolphin = pDolphin;
-            this.interval = reducedTickDelay(pInterval);
-        }
-
-        public boolean canUse() {
-            if (this.dolphin.getRandom().nextInt(this.interval) != 0) {
-                return false;
-            } else {
-                Direction direction = this.dolphin.getMotionDirection();
-                int i = direction.getStepX();
-                int j = direction.getStepZ();
-                BlockPos blockpos = this.dolphin.blockPosition();
-
-                for(int k : STEPS_TO_CHECK) {
-                    if (!this.waterIsClear(blockpos, i, j, k) || !this.surfaceIsClear(blockpos, i, j, k)) {
-                        return false;
-                    }
-                }
-
-                return true;
-            }
-        }
-
-        private boolean waterIsClear(BlockPos pPos, int pDx, int pDz, int pScale) {
-            BlockPos blockpos = pPos.offset(pDx * pScale, 0, pDz * pScale);
-            return this.dolphin.level().getFluidState(blockpos).is(FluidTags.WATER) && !this.dolphin.level().getBlockState(blockpos).blocksMotion();
-        }
-
-        private boolean surfaceIsClear(BlockPos pPos, int pDx, int pDz, int pScale) {
-            return this.dolphin.level().getBlockState(pPos.offset(pDx * pScale, 1, pDz * pScale)).isAir() && this.dolphin.level().getBlockState(pPos.offset(pDx * pScale, 2, pDz * pScale)).isAir();
-        }
-
-        public boolean canContinueToUse() {
-            double d0 = this.dolphin.getDeltaMovement().y;
-            return (!(d0 * d0 < (double)0.03F) || this.dolphin.getXRot() == 0.0F || !(Math.abs(this.dolphin.getXRot()) < 10.0F) || !this.dolphin.isInWater()) && !this.dolphin.onGround();
-        }
-
-        public boolean isInterruptable() {
-            return false;
-        }
-
-        public void start() {
-            Direction direction = this.dolphin.getMotionDirection();
-            this.dolphin.setDeltaMovement(this.dolphin.getDeltaMovement().add((double)direction.getStepX() * 0.6D, 0.7D, (double)direction.getStepZ() * 0.6D));
-            this.dolphin.getNavigation().stop();
-        }
-
-        public void stop() {
-            this.dolphin.setXRot(0.0F);
-        }
-
-        public void tick() {
-            boolean flag = this.breached;
-            if (!flag) {
-                FluidState fluidstate = this.dolphin.level().getFluidState(this.dolphin.blockPosition());
-                this.breached = fluidstate.is(FluidTags.WATER);
-            }
-
-            if (this.breached && !flag) {
-                this.dolphin.playSound(SoundEvents.DOLPHIN_JUMP, 1.0F, 1.0F);
-            }
-
-            Vec3 vec3 = this.dolphin.getDeltaMovement();
-            if (vec3.y * vec3.y < (double)0.03F && this.dolphin.getXRot() != 0.0F) {
-                this.dolphin.setXRot(Mth.rotLerp(0.2F, this.dolphin.getXRot(), 0.0F));
-            } else if (vec3.length() > (double)1.0E-5F) {
-                double d0 = vec3.horizontalDistance();
-                double d1 = Math.atan2(-vec3.y, d0) * (double)(180F / (float)Math.PI);
-                this.dolphin.setXRot((float)d1);
-            }
-
-        }
-    }
-
-    public class OphthalmoOwnerHurtByTargetGoal extends TargetGoal {
+    public class ArchelonOwnerHurtByTargetGoal extends TargetGoal {
         private final ArchelonEntity tameAnimal;
         private LivingEntity ownerLastHurtBy;
         private int timestamp;
 
-        public OphthalmoOwnerHurtByTargetGoal(ArchelonEntity pTameAnimal) {
+        public ArchelonOwnerHurtByTargetGoal(ArchelonEntity pTameAnimal) {
             super(pTameAnimal, false);
             this.tameAnimal = pTameAnimal;
             this.setFlags(EnumSet.of(Flag.TARGET));
@@ -1235,13 +988,13 @@ public class ArchelonEntity extends WaterAnimal implements GeoEntity, OwnableEnt
         }
     }
 
-    static class OphthalmoSwimWithPlayerGoal extends Goal {
+    static class ArchelonSwimWithPlayerGoal extends Goal {
         private final ArchelonEntity dolphin;
         private final double speedModifier;
         @javax.annotation.Nullable
         private Player player;
 
-        OphthalmoSwimWithPlayerGoal(ArchelonEntity pDolphin, double pSpeedModifier) {
+        ArchelonSwimWithPlayerGoal(ArchelonEntity pDolphin, double pSpeedModifier) {
             this.dolphin = pDolphin;
             this.speedModifier = pSpeedModifier;
             this.setFlags(EnumSet.of(Flag.MOVE, Flag.LOOK));
@@ -1301,26 +1054,6 @@ public class ArchelonEntity extends WaterAnimal implements GeoEntity, OwnableEnt
 
         spawnDataIn = super.finalizeSpawn(worldIn, difficultyIn, reason, spawnDataIn, dataTag);
         return super.finalizeSpawn(worldIn, difficultyIn, reason, spawnDataIn, dataTag);
-    }
-
-    public String getColorName(int color){
-        return switch (color){
-            case 1 -> "_black";
-            case 2-> "_green";
-            default -> "_blue";
-        };
-    }
-
-    public String getPatternName(int color){
-        return switch (color){
-            case 2-> "_spots";
-            case 3-> "_streak";
-            default -> "_stripes";
-        };
-    }
-
-    public boolean canBreed() {
-        return this.isTamed() && !this.isAngry();
     }
 
 }
