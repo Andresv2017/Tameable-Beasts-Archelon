@@ -104,9 +104,10 @@ public class EntityInit {
     //Archelon
 
     public static final RegistryObject<EntityType<ArchelonEntity>> ARCHELON = ENTITY_TYPES.register("archelon",
-            () -> EntityType.Builder.of(ArchelonEntity:: new, MobCategory.CREATURE)
-                    .sized(1f,1.3f)
+            () -> EntityType.Builder.of(ArchelonEntity::new, MobCategory.CREATURE)
+                    .sized(1.5f, 1.3f)
                     .build(new ResourceLocation(TameableBeast.MOD_ID, "archelon").toString()));
+
 
 
 
