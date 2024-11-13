@@ -1,6 +1,7 @@
 package com.modderg.tameablebeasts.server.entity.custom;
 
 import com.modderg.tameablebeasts.client.events.ModEventClient;
+import com.modderg.tameablebeasts.server.entity.EntityInit;
 import com.modderg.tameablebeasts.server.entity.RideableTBAnimal;
 import com.modderg.tameablebeasts.server.entity.goals.TBFollowOwnerGoal;
 import com.modderg.tameablebeasts.server.entity.goals.WaterMountLookControl;
@@ -15,6 +16,7 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.EntityDataSerializers;
 import net.minecraft.network.syncher.SynchedEntityData;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.stats.Stats;
 import net.minecraft.tags.FluidTags;
@@ -31,10 +33,7 @@ import net.minecraft.world.entity.ai.goal.*;
 import net.minecraft.world.entity.ai.goal.target.*;
 import net.minecraft.world.entity.ai.navigation.AmphibiousPathNavigation;
 import net.minecraft.world.entity.ai.navigation.PathNavigation;
-import net.minecraft.world.entity.ai.navigation.WaterBoundPathNavigation;
-import net.minecraft.world.entity.ai.targeting.TargetingConditions;
 import net.minecraft.world.entity.ai.util.DefaultRandomPos;
-import net.minecraft.world.entity.animal.Turtle;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
@@ -47,13 +46,11 @@ import net.minecraft.world.level.block.TurtleEggBlock;
 import net.minecraft.world.level.pathfinder.BlockPathTypes;
 import net.minecraft.world.phys.Vec3;
 import org.jetbrains.annotations.NotNull;
-import software.bernie.geckolib.animatable.GeoEntity;
+import org.jetbrains.annotations.Nullable;
 import software.bernie.geckolib.core.animatable.GeoAnimatable;
 import software.bernie.geckolib.core.animation.*;
 import software.bernie.geckolib.core.animation.AnimationState;
 import software.bernie.geckolib.core.object.PlayState;
-
-import java.util.EnumSet;
 
 
 
@@ -78,7 +75,6 @@ public class ArchelonEntity extends RideableTBAnimal {
         this.setPathfindingMalus(BlockPathTypes.WATER, 0.0F);
 
     }
-    static final TargetingConditions SWIM_WITH_PLAYER_TARGETING = TargetingConditions.forNonCombat().range(15.0D).ignoreLineOfSight();
 
     static class TurtleMoveControl extends MoveControl {
         private final ArchelonEntity turtle;
@@ -145,14 +141,13 @@ public class ArchelonEntity extends RideableTBAnimal {
     protected void registerGoals() {
         this.goalSelector.addGoal(0, new TryFindWaterGoal(this));
         this.goalSelector.addGoal(1, new ArchelonEntity.TurtleBreedGoal(this, 1.D));
-        this.goalSelector.addGoal(1, new ArchelonEntity.TurtleTravelGoal(this, 1.0D));
         this.goalSelector.addGoal(1, new ArchelonEntity.TurtleRandomStrollGoal(this, 1.0D, 100));
         this.goalSelector.addGoal(2, new ArchelonEntity.TurtleGoToWaterGoal(this, 1.0D));
-        this.goalSelector.addGoal(1,new TBFollowOwnerGoal(this, 1.0D, 10.0F, 6.0F));
-        this.goalSelector.addGoal(2, new MeleeAttackGoal(this, (double)1F, true));
-        this.goalSelector.addGoal(4, new RandomLookAroundGoal(this));
-        this.goalSelector.addGoal(5, new LookAtPlayerGoal(this, Player.class, 6.0F));
-
+        this.goalSelector.addGoal(3, new ArchelonEntity.TurtleTravelGoal(this, 1.0D));
+        this.goalSelector.addGoal(4,new TBFollowOwnerGoal(this, 1.0D, 10.0F, 6.0F));
+        this.goalSelector.addGoal(5, new MeleeAttackGoal(this, (double)1F, true));
+        this.goalSelector.addGoal(5, new RandomLookAroundGoal(this));
+        this.goalSelector.addGoal(6, new LookAtPlayerGoal(this, Player.class, 6.0F));
         this.targetSelector.addGoal(1, new OwnerHurtByTargetGoal(this));
         this.targetSelector.addGoal(1, new OwnerHurtTargetGoal(this));
         this.targetSelector.addGoal(2, new HurtByTargetGoal(this));
@@ -209,7 +204,6 @@ public class ArchelonEntity extends RideableTBAnimal {
             return !this.mob.isInWater() && super.canUse();
         }
     }
-
 
     static class TurtleTravelGoal extends Goal {
         private final ArchelonEntity turtle;
@@ -304,90 +298,6 @@ public class ArchelonEntity extends RideableTBAnimal {
     }
 
 
-    static class ArchelonSwimWithPlayerGoal extends Goal {
-        private final ArchelonEntity dolphin;
-        private final double speedModifier;
-        @javax.annotation.Nullable
-        private Player player;
-
-        ArchelonSwimWithPlayerGoal(ArchelonEntity pDolphin, double pSpeedModifier) {
-            this.dolphin = pDolphin;
-            this.speedModifier = pSpeedModifier;
-            this.setFlags(EnumSet.of(Flag.MOVE, Flag.LOOK));
-        }
-
-        public boolean canUse() {
-            this.player = this.dolphin.level().getNearestPlayer(ArchelonEntity.SWIM_WITH_PLAYER_TARGETING, this.dolphin);
-            if (this.player == null || !this.dolphin.isTame()) {
-                return false;
-            } else if (this.player == this.dolphin.getOwner()){
-                return this.player.isSwimming();
-            }else {
-                return false;
-            }
-        }
-
-        public boolean canContinueToUse() {
-            return this.player != null && this.player.isSwimming() && this.dolphin.distanceToSqr(this.player) < 256.0D;
-        }
-
-        public void start() {
-            //this.player.addEffect(new MobEffectInstance(MobEffects.DOLPHINS_GRACE, 100), this.dolphin);
-        }
-
-        public void stop() {
-            this.player = null;
-            this.dolphin.getNavigation().stop();
-        }
-
-        public void tick() {
-            this.dolphin.getLookControl().setLookAt(this.player, (float)(this.dolphin.getMaxHeadYRot() + 20), (float)this.dolphin.getMaxHeadXRot());
-            if (this.dolphin.distanceToSqr(this.player) < 6.25D) {
-                this.dolphin.getNavigation().stop();
-            } else {
-                this.dolphin.getNavigation().moveTo(this.player, this.speedModifier);
-            }
-
-        }
-    }
-
-    public class ArchelonOwnerHurtByTargetGoal extends TargetGoal {
-        private final ArchelonEntity tameAnimal;
-        private LivingEntity ownerLastHurtBy;
-        private int timestamp;
-
-        public ArchelonOwnerHurtByTargetGoal(ArchelonEntity pTameAnimal) {
-            super(pTameAnimal, false);
-            this.tameAnimal = pTameAnimal;
-            this.setFlags(EnumSet.of(Flag.TARGET));
-        }
-
-        public boolean canUse() {
-            if (this.tameAnimal.isTame() && !this.tameAnimal.isVehicle()) {
-                LivingEntity livingentity = this.tameAnimal.getOwner();
-                if (livingentity == null) {
-                    return false;
-                } else {
-                    this.ownerLastHurtBy = livingentity.getLastHurtByMob();
-                    int i = livingentity.getLastHurtByMobTimestamp();
-                    return i != this.timestamp && this.canAttack(this.ownerLastHurtBy, TargetingConditions.DEFAULT) && this.tameAnimal.wantsToAttack(this.ownerLastHurtBy, livingentity);
-                }
-            } else {
-                return false;
-            }
-        }
-
-        public void start() {
-            this.mob.setTarget(this.ownerLastHurtBy);
-            LivingEntity livingentity = this.tameAnimal.getOwner();
-            if (livingentity != null) {
-                this.timestamp = livingentity.getLastHurtByMobTimestamp();
-            }
-
-            super.start();
-        }
-    }
-
     @Override
     public @NotNull InteractionResult mobInteract(@NotNull Player player, @NotNull InteractionHand hand) {
         ItemStack itemstack = player.getItemInHand(hand);
@@ -408,7 +318,7 @@ public class ArchelonEntity extends RideableTBAnimal {
 
     @Override
     public boolean isFood(ItemStack itemStack) {
-        return itemStack.is(TBTags.Items.CHIKOTE_FOOD);
+        return itemStack.is(Items.BEETROOT);
     }
 
     @Override
@@ -417,6 +327,12 @@ public class ArchelonEntity extends RideableTBAnimal {
     @Override
     public EggBlockItem getEgg() {
         return (EggBlockItem) ItemInit.CHIKOTE_EGG_ITEM.get();
+    }
+
+    //Bebes
+    @Override
+    public @Nullable AgeableMob getBreedOffspring(ServerLevel serverLevel, AgeableMob mob) {
+        return EntityInit.ARCHELON.get().create(serverLevel);
     }
 
     @Override
