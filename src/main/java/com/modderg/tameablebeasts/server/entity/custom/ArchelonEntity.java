@@ -127,23 +127,24 @@ public class ArchelonEntity extends RideableTBAnimal {
 
     @Override
     public boolean isPushedByFluid() {
-        return false;
+        return true;
     }
 
     public static AttributeSupplier.Builder setCustomAttributes() {
         return Mob.createMobAttributes()
                 .add(Attributes.MAX_HEALTH, 40.0D)
-                .add(Attributes.MOVEMENT_SPEED, 1.2D)
+                .add(Attributes.MOVEMENT_SPEED, 0.1D)
                 .add(Attributes.ATTACK_DAMAGE, 1.0D)
                 .add(Attributes.FOLLOW_RANGE, 24);
+
     }
 
     protected void registerGoals() {
         this.goalSelector.addGoal(0, new TryFindWaterGoal(this));
         this.goalSelector.addGoal(1, new ArchelonEntity.TurtleBreedGoal(this, 1.D));
-        this.goalSelector.addGoal(1, new ArchelonEntity.TurtleRandomStrollGoal(this, 1.0D, 100));
+        this.goalSelector.addGoal(1, new ArchelonEntity.TurtleRandomStrollGoal(this, 0.5D, 70));
         this.goalSelector.addGoal(2, new ArchelonEntity.TurtleGoToWaterGoal(this, 1.0D));
-        this.goalSelector.addGoal(3, new ArchelonEntity.TurtleTravelGoal(this, 1.0D));
+        this.goalSelector.addGoal(3, new ArchelonEntity.TurtleTravelGoal(this, 0.5D));
         this.goalSelector.addGoal(4,new TBFollowOwnerGoal(this, 1.0D, 10.0F, 6.0F));
         this.goalSelector.addGoal(5, new MeleeAttackGoal(this, (double)1F, true));
         this.goalSelector.addGoal(5, new RandomLookAroundGoal(this));
@@ -454,10 +455,6 @@ public class ArchelonEntity extends RideableTBAnimal {
         if (!this.level().isClientSide && !this.isInWater() && this.onGround() && this.isVehicle()){
             this.ejectPassengers();
         }
-
-//        if (!this.level().isClientSide && this.isVehicle()){
-//            this.xRotO = (float) (-this.getDeltaMovement().y * 80);
-//        }
     }
 
     public void travel(Vec3 vec3d) {

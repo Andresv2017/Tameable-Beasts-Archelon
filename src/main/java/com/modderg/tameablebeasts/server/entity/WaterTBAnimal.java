@@ -104,7 +104,7 @@ public class WaterTBAnimal extends TBAnimal {
                 this.setDeltaMovement(Vec3.ZERO); // Reinicia la velocidad para suavizar el cambio
             }
             // Movimiento en agua
-            this.moveRelative(0.2F, movementVector); // Velocidad rápida en agua
+            this.moveRelative(0.0F, movementVector); // Velocidad rápida en agua
             this.move(MoverType.SELF, this.getDeltaMovement());
             this.setDeltaMovement(this.getDeltaMovement().scale(0.8F)); // Resistencia en agua
         } else {

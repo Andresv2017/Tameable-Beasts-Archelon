@@ -93,7 +93,7 @@ public class WaterRideableTBAnimal extends WaterTBAnimal implements TBRideable {
                 if (z <= 0)
                     z *= 0.25f;
 
-                float speed = this.isInWater() ? 0.2f : 0.05f;
+                float speed = this.isInWater() ? 0.05f : 0.1f;
                 this.setSpeed(speed);
 
                 double yMovement = this.isInWater() ? (upInput ? 0.1 : downInput ? -0.1 : 0) : vec3.y;
